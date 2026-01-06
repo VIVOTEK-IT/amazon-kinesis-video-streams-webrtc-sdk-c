@@ -106,6 +106,13 @@ if(GST_FOUND)
   )
 endif()
 
+if (WIN32)
+  # Use vcpkg imported target for libwebsockets
+  set(LIBWEBSOCKETS_LIBRARIES websockets_shared)
+else()
+  pkg_check_modules(LIBWEBSOCKETS REQUIRED libwebsockets)
+endif()
+
 install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientViewer discoverNatBehavior
   RUNTIME DESTINATION bin
 )

@@ -9,18 +9,18 @@ project(KinesisVideoWebRTCClient VERSION 1.12.1 LANGUAGES C)
 
 # User Flags
 option(ADD_MUCLIBC "Add -muclibc c flag" OFF)
-option(BUILD_DEPENDENCIES "Whether or not to build depending libraries from source" ON)
+option(BUILD_DEPENDENCIES "Whether or not to build depending libraries from source" OFF)
 option(USE_OPENSSL "Use openssl as crypto library" ON)
 option(USE_MBEDTLS "Use mbedtls as crypto library" OFF)
 option(BUILD_STATIC_LIBS "Build all libraries statically. (This includes third-party libraries.)" OFF)
 option(BUILD_OPENSSL_PLATFORM "If buildng OpenSSL what is the target platform" OFF)
 option(BUILD_LIBSRTP_HOST_PLATFORM "If buildng LibSRTP what is the current platform" OFF)
 option(BUILD_LIBSRTP_DESTINATION_PLATFORM "If buildng LibSRTP what is the destination platform" OFF)
-option(BUILD_SAMPLE "Build available samples" ON)
+option(BUILD_SAMPLE "Build available samples" OFF)
 option(ENABLE_DATA_CHANNEL "Enable support for data channel" ON)
 option(ENABLE_KVS_THREADPOOL "Enable support for KVS thread pool in signaling" OFF)
 option(INSTRUMENTED_ALLOCATORS "Enable memory instrumentation" OFF)
-option(ENABLE_AWS_SDK_IN_TESTS "Enable support for compiling AWS SDKs for tests" ON)
+option(ENABLE_AWS_SDK_IN_TESTS "Enable support for compiling AWS SDKs for tests" OFF)
 option(ENABLE_STATS_CALCULATION_CONTROL "Enable support for runtime control of ice agent stat calculations." OFF)
 
 # Developer Flags
@@ -33,11 +33,6 @@ option(MEMORY_SANITIZER "Build with MemorySanitizer." OFF)
 option(THREAD_SANITIZER "Build with ThreadSanitizer." OFF)
 option(UNDEFINED_BEHAVIOR_SANITIZER "Build with UndefinedBehaviorSanitizer." OFF)
 option(LINK_PROFILER "Link gperftools profiler" OFF)
-
-if(WIN32)
-  set(EXT_PTHREAD_INCLUDE_DIR "" CACHE PATH "Path to the PThread dir")
-  set(EXT_PTHREAD_LIBRARIES "" CACHE FILEPATH "Path to PThread libraries")
-endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Setting CMAKE_BUILD_TYPE to Release by default")
@@ -155,125 +150,25 @@ elseif(USE_MBEDTLS)
 endif()
 
 
-if(BUILD_DEPENDENCIES)
-  if(NOT EXISTS ${OPEN_SRC_INSTALL_PREFIX})
-    file(MAKE_DIRECTORY ${OPEN_SRC_INSTALL_PREFIX})
-  endif()
 
-  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${OPEN_SRC_INSTALL_PREFIX}/lib/pkgconfig")
-  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${OPEN_SRC_INSTALL_PREFIX})
+find_package(libwebsockets CONFIG REQUIRED)
+find_package(libSRTP CONFIG REQUIRED)
 
-  message(STATUS "Begin building dependencies.")
-
-  set(SSL_OPTIONS USE_OPENSSL USE_MBEDTLS)
-  count_true(ENABLED_SSL_OPTION_COUNT ${SSL_OPTIONS})
-
-  if(ENABLED_SSL_OPTION_COUNT GREATER "1")
-    message(FATAL_ERROR "Only one of ${SSL_OPTIONS} can be enabled")
-  endif()
-
-  if (USE_OPENSSL)
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                   -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
-                   -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
-    build_dependency(openssl ${BUILD_ARGS})
-    set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
-  elseif(USE_MBEDTLS)
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                    "-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -std=c99")
-      build_dependency(mbedtls ${BUILD_ARGS})
-  endif()
-
-  # This step is necessary because the next set of dependencies have a dependency on
-  # mbedtls/openssl and the find_package command  populates certain cmake variables which
-  # are needed to pass to the cmake commands for the next set of dependencies
-  if (USE_OPENSSL)
-    find_package(OpenSSL REQUIRED)
-    set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
-  else()
-    find_package(MbedTLS REQUIRED)
-    set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${MBEDTLS_INCLUDE_DIRS})
-    string(REPLACE ";" "|" MBEDTLS_LIBRARIES_ALT_SEP "${MBEDTLS_LIBRARIES}")
-  endif()
-
-  if(WIN32)
-    set(OPENSSL_INCLUDE_DIRS "${OPEN_SRC_INSTALL_PREFIX}/include/")
-    set(OPENSSL_CRYPTO_LIBRARY "${OPEN_SRC_INSTALL_PREFIX}/lib/libcrypto.lib")
-    set(OPENSSL_SSL_LIBRARY "${OPEN_SRC_INSTALL_PREFIX}/lib/libssl.lib")
-    set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
-    string(REPLACE ";" "|" OPENSSL_LIBRARIES_ALT_SEP "${OPENSSL_LIBRARIES}")
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                  -DUSE_OPENSSL=${USE_OPENSSL}
-                  -DUSE_MBEDTLS=${USE_MBEDTLS}
-                  -DLWS_EXT_PTHREAD_INCLUDE_DIR=${EXT_PTHREAD_INCLUDE_DIR}
-                  -DLWS_EXT_PTHREAD_LIBRARIES=${EXT_PTHREAD_LIBRARIES}
-                  -DLWS_OPENSSL_INCLUDE_DIRS=${OPENSSL_INCLUDE_DIRS}
-                  -DLWS_OPENSSL_LIBRARIES=${OPENSSL_LIBRARIES_ALT_SEP}
-                  -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-  else()
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                  -DOPENSSL_DIR=${OPEN_SRC_INSTALL_PREFIX}
-                  -DUSE_OPENSSL=${USE_OPENSSL}
-                  -DUSE_MBEDTLS=${USE_MBEDTLS}
-                  -DLWS_OPENSSL_CRYPTO_LIBRARY=${OPENSSL_CRYPTO_LIBRARY}
-                  -DLWS_OPENSSL_SSL_LIBRARY=${OPENSSL_SSL_LIBRARY}
-                  -DLWS_OPENSSL_INCLUDE_DIRS=${OPENSSL_INCLUDE_DIR}
-                  -DLWS_MBEDTLS_INCLUDE_DIRS=${MBEDTLS_INCLUDE_DIRS}
-                  -DLWS_MBEDTLS_LIBRARIES=${MBEDTLS_LIBRARIES_ALT_SEP}
-                  -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-  endif()
-  build_dependency(websockets ${BUILD_ARGS})
-
-  set(BUILD_ARGS
-      -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-      -DOPENSSL_DIR=${OPEN_SRC_INSTALL_PREFIX}
-      -DBUILD_LIBSRTP_HOST_PLATFORM=${BUILD_LIBSRTP_HOST_PLATFORM}
-      -DBUILD_LIBSRTP_DESTINATION_PLATFORM=${BUILD_LIBSRTP_DESTINATION_PLATFORM}
-      -DUSE_OPENSSL=${USE_OPENSSL}
-      -DUSE_MBEDTLS=${USE_MBEDTLS}
-      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-
-  build_dependency(srtp ${BUILD_ARGS})
-
-  set(BUILD_ARGS
-      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-
-  build_dependency(usrsctp ${BUILD_ARGS})
-
-  if(BUILD_TEST)
-    build_dependency(gtest)
-
-    if(ENABLE_AWS_SDK_IN_TESTS)
-      build_dependency(awscpp)
-    endif()
-
-  endif()
-
-  if(BUILD_BENCHMARK)
-    build_dependency(benchmark)
-  endif()
-
-  if (LINK_PROFILER)
-    build_dependency(gperftools)
-  endif()
-  message(STATUS "Finished building dependencies.")
+#if(BUILD_TEST)
+#awscpp
+#endif()
+if(BUILD_BENCHMARK)
+  find_package(benchmark CONFIG REQUIRED)
+endif()
+if (LINK_PROFILER)
+  find_package(Gperftools REQUIRED)
 endif()
 
+
 # building kvsCommonLws also builds kvspic
-set(BUILD_ARGS
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DBUILD_STATIC=${BUILD_STATIC_LIBS}
-        -DUSE_OPENSSL=${USE_OPENSSL}
-        -DUSE_MBEDTLS=${USE_MBEDTLS}
-        -DKVS_DEFAULT_STACK_SIZE=${KVS_DEFAULT_STACK_SIZE}
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS})
-build_dependency(kvsCommonLws ${BUILD_ARGS})
+## PRE BUILD TO kvs_supergiftpack
+set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${KVSPC_DIR}/include)
+link_directories("${KVSPC_DIR}/lib")
 
 ############# find dependent libraries ############
 
@@ -288,11 +183,11 @@ else()
 endif()
 
 if (OPEN_SRC_INSTALL_PREFIX)
-  find_library(SRTP_LIBRARIES srtp2 REQUIRED PATHS ${OPEN_SRC_INSTALL_PREFIX})
+  find_library(SRTP_LIBRARIES srtp2 REQUIRED)
 
   if (LINK_PROFILER)
-    find_library(GPERFTOOLS_MALLOC_LIBRARIES tcmalloc REQUIRED PATHS ${OPEN_SRC_INSTALL_PREFIX})
-    find_library(GPERFTOOLS_PROFILER_LIBRARIES profiler REQUIRED PATHS ${OPEN_SRC_INSTALL_PREFIX})
+    find_library(GPERFTOOLS_MALLOC_LIBRARIES tcmalloc REQUIRED)
+    find_library(GPERFTOOLS_PROFILER_LIBRARIES profiler REQUIRED)
   endif()
 else()
   find_library(SRTP_LIBRARIES srtp2 REQUIRED )
@@ -303,17 +198,15 @@ else()
 endif()
 
 if (WIN32)
-  SET(LIBWEBSOCKETS_LIBRARIES "websockets.lib")
+  # Use vcpkg imported target for libwebsockets
+  set(LIBWEBSOCKETS_LIBRARIES websockets_shared)
 else()
   pkg_check_modules(LIBWEBSOCKETS REQUIRED libwebsockets)
 endif()
 
 # usrsctp dont support pkgconfig yet
-find_library(
-  Usrsctp
-  NAMES ${USRSCTP_LIBNAME} usrsctp REQUIRED
-  PATHS ${OPEN_SRC_INSTALL_PREFIX}/lib ${OPEN_SRC_INSTALL_PREFIX}/lib64)
-
+find_package(unofficial-usrsctp CONFIG REQUIRED)
+set(Usrsctp unofficial::usrsctp::usrsctp)
 set(OPEN_SRC_INCLUDE_DIRS ${OPEN_SRC_INCLUDE_DIRS} ${LIBSRTP_INCLUDE_DIRS}
                           ${CURL_INCLUDE_DIRS} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
@@ -458,7 +351,12 @@ target_link_libraries(
          ${MBEDTLS_LIBRARIES})
 
 if (WIN32)
-  target_link_libraries(kvsWebrtcClient PRIVATE "Ws2_32" "iphlpapi")
+  target_link_libraries(
+    kvsWebrtcClient 
+    PRIVATE 
+      "Ws2_32" 
+      "iphlpapi"
+      )
 endif()
 
 if(COMPILER_WARNINGS)

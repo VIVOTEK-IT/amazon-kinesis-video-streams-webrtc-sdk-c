@@ -12,3 +12,4 @@ tags
 CMakeLists.txt.user
 *.vscode
 *.swp
+vcpkg_installed/

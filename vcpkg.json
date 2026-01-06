@@ -1,0 +1,22 @@
+{
+  "name": "kinesis-video-webrtc-client",
+  "version-string": "1.12.1",
+  "description": "Amazon Kinesis Video Streams WebRTC C SDK",
+  "dependencies": [
+    "openssl",
+    "mbedtls",
+    "libwebsockets",
+    "libsrtp",
+    "usrsctp",
+    "benchmark",
+    "gperftools",
+    "gtest",
+    "pkgconf"
+  ],
+  "features": {
+    "aws-sdk": {
+      "description": "Enable AWS SDK support for tests.",
+      "dependencies": ["aws-sdk-cpp"]
+    }
+  }
+}
