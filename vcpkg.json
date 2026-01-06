@@ -1,6 +1,7 @@
 {
   "name": "kinesis-video-webrtc-client",
   "version-string": "1.12.1",
+  "builtin-baseline": "1a7377e3691bd7c6d4d71e2008d7caacf818742e",
   "description": "Amazon Kinesis Video Streams WebRTC C SDK",
   "dependencies": [
     "openssl",
@@ -13,10 +14,72 @@
     "gtest",
     "pkgconf"
   ],
+  "overrides": [
+    {
+      "name": "benchmark",
+      "version": "1.9.4"
+    },
+    {
+      "name": "gperftools",
+      "version": "2.16"
+    },
+    {
+      "name": "gtest",
+      "version": "1.17.0",
+      "port-version": 2
+    },
+    {
+      "name": "libsrtp",
+      "version": "2.7.0",
+      "port-version": 1
+    },
+    {
+      "name": "libuv",
+      "version": "1.51.0"
+    },
+    {
+      "name": "libwebsockets",
+      "version": "4.4.1"
+    },
+    {
+      "name": "mbedtls",
+      "version": "3.6.4"
+    },
+    {
+      "name": "openssl",
+      "version": "3.6.0"
+    },
+    {
+      "name": "pkgconf",
+      "version": "2.5.1",
+      "port-version": 2
+    },
+    {
+      "name": "pthread",
+      "version": "3.0.0",
+      "port-version": 2
+    },
+    {
+      "name": "pthreads",
+      "version": "3.0.0",
+      "port-version": 14
+    },
+    {
+      "name": "usrsctp",
+      "version": "0.9.5.0",
+      "port-version": 4
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.1"
+    }
+  ],
   "features": {
     "aws-sdk": {
       "description": "Enable AWS SDK support for tests.",
-      "dependencies": ["aws-sdk-cpp"]
+      "dependencies": [
+        "aws-sdk-cpp"
+      ]
     }
   }
 }
