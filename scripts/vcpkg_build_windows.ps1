@@ -34,6 +34,12 @@ if ($clPath) {
     exit 1
 }
 
+# 強制 vcpkg 使用指定的 Visual Studio
+$vsPath = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $vcvarsPath)))
+# 這會從 ".../VC/Auxiliary/Build/vcvars64.bat" 取得 ".../BuildTools" 或 ".../Community"
+$env:VCPKG_VISUAL_STUDIO_PATH = $vsPath
+Write-Host "Set VCPKG_VISUAL_STUDIO_PATH = $vsPath" -ForegroundColor Cyan
+
 if (-not (Test-Path $buildDir)) {
     New-Item -ItemType Directory -Path $buildDir | Out-Null
 }
