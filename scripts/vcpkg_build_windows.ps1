@@ -1,7 +1,7 @@
 ﻿# vcpkg_build_windows.ps1
 
 param(
-    [string]$vcvarsPath = "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat",
+    [string]$vcvarsPath = "C:/Program Files/Microsoft Visual Studio/2022/BuildTools/VC/Auxiliary/Build/vcvars64.bat",
     [string]$installPath = "C:/Source/kvs_supergiftpack/",
     [string]$vcpkgTriplet = "x64-windows",
     [string]$toolchainFile = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -15,7 +15,24 @@ $buildDir = "build"
 
 $env:VCPKG_DEFAULT_TRIPLET = $vcpkgTriplet
 
-& $vcvarsPath x86_amd64
+# === 正確呼叫 vcvars64.bat 並匯入環境變數到 PowerShell ===
+Write-Host "Setting up MSVC environment from: $vcvarsPath" -ForegroundColor Cyan
+$vcvarsCmd = "`"$vcvarsPath`" && set"
+$envLines = cmd /c $vcvarsCmd 2>&1
+foreach ($line in $envLines) {
+    if ($line -match "^([^=]+)=(.*)$") {
+        [Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
+    }
+}
+
+# 驗證 cl.exe 是否正確設定
+$clPath = (Get-Command cl.exe -ErrorAction SilentlyContinue).Source
+if ($clPath) {
+    Write-Host "Using compiler: $clPath" -ForegroundColor Green
+} else {
+    Write-Error "cl.exe not found after setting up vcvars!"
+    exit 1
+}
 
 if (-not (Test-Path $buildDir)) {
     New-Item -ItemType Directory -Path $buildDir | Out-Null
