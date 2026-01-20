@@ -7,6 +7,9 @@ param(
     [string]$toolchainFile = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 )
 
+Import-Module "$PSScriptRoot\utilty.ps1" -Force
+Import-Module "$PSScriptRoot\vcpkg_utilty.ps1" -Force
+
 $installPrefixDebug = Join-Path $installPath "Debug/webrtc"
 $installPrefixRelease = Join-Path $installPath "Release/webrtc"
 $kvspcDirDebug = Join-Path $installPath "Debug/producer"
@@ -15,30 +18,7 @@ $buildDir = "build"
 
 $env:VCPKG_DEFAULT_TRIPLET = $vcpkgTriplet
 
-# === 正確呼叫 vcvars64.bat 並匯入環境變數到 PowerShell ===
-Write-Host "Setting up MSVC environment from: $vcvarsPath" -ForegroundColor Cyan
-$vcvarsCmd = "`"$vcvarsPath`" && set"
-$envLines = cmd /c $vcvarsCmd 2>&1
-foreach ($line in $envLines) {
-    if ($line -match "^([^=]+)=(.*)$") {
-        [Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
-    }
-}
-
-# 驗證 cl.exe 是否正確設定
-$clPath = (Get-Command cl.exe -ErrorAction SilentlyContinue).Source
-if ($clPath) {
-    Write-Host "Using compiler: $clPath" -ForegroundColor Green
-} else {
-    Write-Error "cl.exe not found after setting up vcvars!"
-    exit 1
-}
-
-# 強制 vcpkg 使用指定的 Visual Studio
-$vsPath = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $vcvarsPath)))
-# 這會從 ".../VC/Auxiliary/Build/vcvars64.bat" 取得 ".../BuildTools" 或 ".../Community"
-$env:VCPKG_VISUAL_STUDIO_PATH = $vsPath
-Write-Host "Set VCPKG_VISUAL_STUDIO_PATH = $vsPath" -ForegroundColor Cyan
+Initialize-VcVarsEnvironment -VcVarsPath $vcvarsPath
 
 if (-not (Test-Path $buildDir)) {
     New-Item -ItemType Directory -Path $buildDir | Out-Null
