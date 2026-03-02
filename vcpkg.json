@@ -1,7 +1,7 @@
 {
   "name": "kinesis-video-webrtc-client",
   "version-string": "1.12.1",
-  "builtin-baseline": "fafcc0e93bfba303e5e48790def745d27e6d449b",
+  "builtin-baseline": "62159a45e18f3a9ac0548628dcaf74fcb60c6ff9",
   "description": "Amazon Kinesis Video Streams WebRTC C SDK",
   "dependencies": [
     "openssl",
