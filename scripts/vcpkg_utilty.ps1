@@ -27,6 +27,7 @@ function Initialize-VcVarsEnvironment {
     }
 
     Write-CyanToConsole "Setting up MSVC environment from: $VcVarsPath"
+    $originalVcpkgRoot = $env:VCPKG_ROOT
     
     # 呼叫 vcvars64.bat 並擷取環境變數
     $vcvarsCmd = "`"$VcVarsPath`" && set"
@@ -35,6 +36,14 @@ function Initialize-VcVarsEnvironment {
         if ($line -match "^([^=]+)=(.*)$") {
             [Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
         }
+    }
+
+    if ($originalVcpkgRoot) {
+        $env:VCPKG_ROOT = $originalVcpkgRoot
+        Write-CyanToConsole "Restored VCPKG_ROOT = $env:VCPKG_ROOT"
+    } elseif ($env:VCPKG_ROOT) {
+        Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
+        Write-CyanToConsole "Unset VCPKG_ROOT from vcvars environment"
     }
 
     # 驗證 cl.exe 是否正確設定
