@@ -38,9 +38,10 @@ function Initialize-VcVarsEnvironment {
         }
     }
 
-    if ($originalVcpkgRoot) {
-        $env:VCPKG_ROOT = $originalVcpkgRoot
-        Write-CyanToConsole "Restored VCPKG_ROOT = $env:VCPKG_ROOT"
+    $vcpkgRoot = Resolve-VcpkgRootAfterVcVars -OriginalVcpkgRoot $originalVcpkgRoot
+    if ($vcpkgRoot) {
+        $env:VCPKG_ROOT = $vcpkgRoot
+        Write-CyanToConsole "Set VCPKG_ROOT = $env:VCPKG_ROOT"
     } elseif ($env:VCPKG_ROOT) {
         Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
         Write-CyanToConsole "Unset VCPKG_ROOT from vcvars environment"
@@ -62,6 +63,36 @@ function Initialize-VcVarsEnvironment {
     Write-CyanToConsole "Set VCPKG_VISUAL_STUDIO_PATH = $vsPath"
 
     Assert-CMakeVersion
+}
+
+function Test-IsVisualStudioVcpkgRoot {
+    param(
+        [string]$Path
+    )
+
+    if (-not $Path) {
+        return $false
+    }
+
+    $normalizedPath = $Path.TrimEnd("\", "/") -replace "/", "\"
+    return $normalizedPath -match "\\VC\\vcpkg$"
+}
+
+function Resolve-VcpkgRootAfterVcVars {
+    param(
+        [string]$OriginalVcpkgRoot,
+        [string]$DefaultVcpkgRoot = "C:/vcpkg"
+    )
+
+    if ($OriginalVcpkgRoot -and -not (Test-IsVisualStudioVcpkgRoot -Path $OriginalVcpkgRoot)) {
+        return $OriginalVcpkgRoot
+    }
+
+    if (Test-Path $DefaultVcpkgRoot) {
+        return $DefaultVcpkgRoot
+    }
+
+    return $null
 }
 
 function Get-RequiredCMakeVersion {
