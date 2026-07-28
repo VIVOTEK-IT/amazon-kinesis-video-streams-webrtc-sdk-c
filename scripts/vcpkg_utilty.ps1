@@ -100,7 +100,7 @@ function Get-RequiredCMakeVersion {
         return $env:HOMER_EXPECTED_CMAKE_VERSION
     }
 
-    return "4.3.3"
+    return "4.4.0"
 }
 
 function Assert-CMakeVersion {
